@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_tracker/features/tracking/view_models.dart';
+import 'package:time_tracker/app/providers.dart' as app_providers;
 
 class CurrentPanel extends ConsumerStatefulWidget {
   const CurrentPanel({super.key});
@@ -43,21 +44,39 @@ class _CurrentPanelState extends ConsumerState<CurrentPanel> {
         child: Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry == null ? 'No active entry' : 'Task: ${entry.taskId}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(_formatDuration(elapsed), style: Theme.of(context).textTheme.bodyLarge),
-                ],
+              child: StreamBuilder(
+                stream: ref
+                    .watch(app_providers.tasksDaoProvider)
+                    .watchAll(includeArchived: true),
+                builder: (context, snapshot) {
+                  final tasks = snapshot.data ?? const [];
+                  final Map<String, String> idToName = {
+                    for (final t in tasks) t.id: t.name,
+                  };
+                  final String label = entry == null
+                      ? 'No active entry'
+                      : 'Task: ${idToName[entry.taskId] ?? entry.taskId}';
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatDuration(elapsed),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             if (entry != null)
               FilledButton.icon(
-                onPressed: () => ref.read(trackingViewModelProvider.notifier).stopCurrent(),
+                onPressed: () =>
+                    ref.read(trackingViewModelProvider.notifier).stopCurrent(),
                 icon: const Icon(Icons.stop),
                 label: const Text('Stop'),
               ),
@@ -74,5 +93,3 @@ class _CurrentPanelState extends ConsumerState<CurrentPanel> {
     return [h, m, s].map((v) => v.toString().padLeft(2, '0')).join(':');
   }
 }
-
-

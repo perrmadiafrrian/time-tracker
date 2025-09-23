@@ -54,7 +54,7 @@ class _EntriesListState extends ConsumerState<EntriesList> {
               final duration = (e.end ?? DateTime.now().toUtc()).difference(
                 e.start,
               );
-              final taskName = idToName[e.taskId] ?? e.taskId;
+              final taskName = idToName[e.taskId] ?? 'Loading…';
               return ListTile(
                 leading: Icon(icon),
                 title: Text(taskName),
