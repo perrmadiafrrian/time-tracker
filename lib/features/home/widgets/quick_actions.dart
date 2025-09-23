@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:time_tracker/app/app.dart' show promptStartOrSwitchTask;
 import 'package:time_tracker/app/providers.dart';
 import 'package:time_tracker/features/tracking/view_models.dart';
+import 'package:time_tracker/core/csv_exporter.dart';
 
 class QuickActions extends ConsumerStatefulWidget {
   const QuickActions({super.key});
@@ -23,55 +26,76 @@ class _QuickActionsState extends ConsumerState<QuickActions> {
   Widget build(BuildContext context) {
     final vm = ref.read(trackingViewModelProvider.notifier);
     final active = ref.watch(activeEntryProvider).valueOrNull;
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _controller,
-            decoration: const InputDecoration(
-              labelText: 'Task name',
-              border: OutlineInputBorder(),
-              isDense: true,
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          FilledButton(
+            onPressed: () => promptStartOrSwitchTask(context),
+            child: Text(
+              (active != null || ref.read(isBreakPausedProvider))
+                  ? 'Switch Task'
+                  : 'Start Task',
             ),
-            onSubmitted: (_) => _startOrSwitch(vm, active != null),
           ),
-        ),
-        const SizedBox(width: 8),
-        FilledButton(
-          onPressed: () => _startOrSwitch(vm, active != null),
-          child: Text(active != null ? 'Switch' : 'Start'),
-        ),
-        const SizedBox(width: 8),
-        Consumer(
-          builder: (context, ref, _) {
-            final settingsAsync = ref.watch(settingsProvider);
-            final label =
-                settingsAsync.valueOrNull?.defaultBreakLabel ?? 'Break';
-            return FilledButton.icon(
-              onPressed: () => vm.startBreak(),
-              icon: const Icon(Icons.lunch_dining),
-              label: Text(label),
-            );
-          },
-        ),
-        const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: () => vm.resumePreviousTask(),
-          icon: const Icon(Icons.restore),
-          label: const Text('Resume Previous'),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Consumer(
+            builder: (context, ref, _) {
+              final settingsAsync = ref.watch(settingsProvider);
+              final isPaused = ref.watch(isBreakPausedProvider);
+              final label = isPaused
+                  ? 'End Break'
+                  : (settingsAsync.valueOrNull?.defaultBreakLabel ?? 'Break');
+              return FilledButton.icon(
+                onPressed: () =>
+                    isPaused ? vm.resumePreviousTask() : vm.startBreak(),
+                icon: const Icon(Icons.lunch_dining),
+                label: Text(label),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: () async {
+              final entries = await ref.read(todayEntriesProvider.future);
+              final csv = exportTimeEntriesToCsv(entries);
+              if (!context.mounted) return;
+              await showDialog<void>(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('Today\'s CSV'),
+                    content: SizedBox(
+                      width: 500,
+                      height: 300,
+                      child: SingleChildScrollView(child: SelectableText(csv)),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: csv));
+                          if (context.mounted) Navigator.of(context).pop();
+                        },
+                        child: const Text('Copy'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+            icon: const Icon(Icons.stop),
+            label: const Text('End Day'),
+          ),
+        ],
+      ),
     );
   }
 
-  void _startOrSwitch(TrackingViewModel vm, bool hasActive) {
-    final name = _controller.text.trim();
-    if (name.isEmpty) return;
-    if (hasActive) {
-      vm.switchTaskByName(name: name);
-    } else {
-      vm.startTaskByName(name: name);
-    }
-    _controller.clear();
-  }
+  // Deprecated: handled by promptStartOrSwitchTask dialog
 }

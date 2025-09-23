@@ -38,49 +38,44 @@ class _CurrentPanelState extends ConsumerState<CurrentPanel> {
         ? Duration.zero
         : (entry.endAt ?? now).difference(entry.startAt);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: StreamBuilder(
-                stream: ref
-                    .watch(app_providers.tasksDaoProvider)
-                    .watchAll(includeArchived: true),
-                builder: (context, snapshot) {
-                  final tasks = snapshot.data ?? const [];
-                  final Map<String, String> idToName = {
-                    for (final t in tasks) t.id: t.name,
-                  };
-                  final String label = entry == null
-                      ? 'No active entry'
-                      : 'Task: ${idToName[entry.taskId] ?? entry.taskId}';
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatDuration(elapsed),
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ],
-                  );
-                },
+    return SizedBox.expand(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: StreamBuilder(
+                  stream: ref
+                      .watch(app_providers.tasksDaoProvider)
+                      .watchAll(includeArchived: true),
+                  builder: (context, snapshot) {
+                    final tasks = snapshot.data ?? const [];
+                    final Map<String, String> idToName = {
+                      for (final t in tasks) t.id: t.name,
+                    };
+                    final String label = entry == null
+                        ? 'No active entry'
+                        : 'Task: ${idToName[entry.taskId] ?? 'Loading…'}';
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatDuration(elapsed),
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
-            if (entry != null)
-              FilledButton.icon(
-                onPressed: () =>
-                    ref.read(trackingViewModelProvider.notifier).stopCurrent(),
-                icon: const Icon(Icons.stop),
-                label: const Text('Stop'),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

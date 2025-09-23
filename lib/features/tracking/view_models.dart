@@ -83,17 +83,15 @@ class TrackingViewModel extends _$TrackingViewModel {
   }
 
   Future<void> startBreak() async {
+    // Pause current task: stop the active entry without creating a break task
     final repo = ref.read(timeEntryRepositoryProvider);
     final currentRes = await repo.active();
     final current = currentRes.when(success: (v) => v, failure: (_) => null);
     if (current != null) {
+      // Ensure we remember the last non-break task id for resuming
+      state = state.copyWith(lastNonBreakTaskId: current.taskId);
       await repo.stop(id: current.id, endAt: DateTime.now().toUtc());
     }
-    // Start a break entry using configured label
-    final settings = await ref.read(settingsProvider.future);
-    final String breakTaskName = settings.defaultBreakLabel.trim();
-    final String taskId = await _resolveTaskIdByName(breakTaskName);
-    await startTask(taskId: taskId);
   }
 
   Future<String> _resolveTaskIdByName(String name) async {
@@ -126,6 +124,13 @@ class TrackingViewModel extends _$TrackingViewModel {
     }
   }
 }
+
+/// True when there is no active entry but we have a last non-break task id
+final isBreakPausedProvider = Provider<bool>((ref) {
+  final active = ref.watch(activeEntryProvider).valueOrNull;
+  final state = ref.watch(trackingViewModelProvider);
+  return active == null && state.lastNonBreakTaskId != null;
+});
 
 @riverpod
 Stream<TimeEntry?> activeEntry(Ref ref) {

@@ -5,6 +5,8 @@ import 'package:time_tracker/app/theme.dart';
 import 'package:time_tracker/core/window_utils.dart';
 import 'package:time_tracker/features/home/home_screen.dart';
 import 'package:tray_manager/tray_manager.dart';
+import 'package:time_tracker/app/app.dart'
+    show appNavigatorKey, promptStartOrSwitchTask;
 
 class _TrayHandler with TrayListener {
   void init() {
@@ -24,10 +26,15 @@ class _TrayHandler with TrayListener {
   void onTrayMenuItemClick(MenuItem menuItem) async {
     switch (menuItem.key) {
       case 'show_hide':
-        await WindowUtils.toggleMainWindow();
+        // Bring Up Window: always show and focus
+        await WindowUtils.showMainWindow();
         break;
       case 'start_switch':
-        // This requires UI input for task name; consider prompting later
+        await WindowUtils.showMainWindow();
+        final context = appNavigatorKey.currentContext;
+        if (context != null) {
+          await promptStartOrSwitchTask(context);
+        }
         break;
       case 'lunch_break':
         // This will be handled via provider in UI
@@ -62,11 +69,10 @@ Future<void> _setupTray() async {
   await trayManager.setIcon(iconPath);
   final Menu menu = Menu(
     items: [
-      MenuItem(key: 'show_hide', label: 'Show/Hide Window'),
+      MenuItem(key: 'show_hide', label: 'Bring Up Window'),
       MenuItem.separator(),
       MenuItem(key: 'start_switch', label: 'Start/Switch'),
       MenuItem(key: 'lunch_break', label: 'Lunch Break'),
-      MenuItem(key: 'resume_prev', label: 'Resume Previous'),
       MenuItem(key: 'stop', label: 'Stop'),
       MenuItem.separator(),
       MenuItem(key: 'quit', label: 'Quit'),
@@ -85,7 +91,9 @@ class MyApp extends StatelessWidget {
       title: 'Time Tracker',
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
+      navigatorKey: appNavigatorKey,
       home: const AppMenuBar(child: HomeScreen()),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

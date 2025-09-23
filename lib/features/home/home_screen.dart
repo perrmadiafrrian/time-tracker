@@ -5,7 +5,6 @@ import 'package:time_tracker/features/home/widgets/current_panel.dart';
 import 'package:time_tracker/features/home/widgets/entries_list.dart';
 import 'package:time_tracker/features/home/widgets/quick_actions.dart';
 import 'package:time_tracker/features/home/widgets/summary_card.dart';
-import 'package:time_tracker/features/home/widgets/settings_dialog.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -13,35 +12,27 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Time Tracker'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Settings',
-            onPressed: () async {
-              await showDialog<void>(
-                context: context,
-                builder: (context) => const SettingsDialog(),
-              );
-            },
-          ),
-        ],
-      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-              children: const [
-                TraySync(),
-                CurrentPanel(),
-                SizedBox(height: 16),
-                QuickActions(),
-                SizedBox(height: 16),
-                SummaryCard(),
-                SizedBox(height: 16),
-                Expanded(child: EntriesList()),
+              children: [
+                const TraySync(),
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: const [
+                      Expanded(flex: 3, child: CurrentPanel()),
+                      SizedBox(width: 8),
+                      Expanded(flex: 1, child: QuickActions()),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const SummaryCard(),
+                const SizedBox(height: 16),
+                const Expanded(child: EntriesList()),
               ],
             ),
           );
