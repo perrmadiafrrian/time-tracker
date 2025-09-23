@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:time_tracker/app/app.dart' show promptStartOrSwitchTask;
 import 'package:time_tracker/app/providers.dart';
 import 'package:time_tracker/features/tracking/view_models.dart';
@@ -32,9 +33,14 @@ class _QuickActionsState extends ConsumerState<QuickActions> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          FilledButton(
+          FilledButton.icon(
             onPressed: () => promptStartOrSwitchTask(context),
-            child: Text(
+            icon: SvgPicture.asset(
+              'assets/icons/start.svg',
+              width: 18,
+              height: 18,
+            ),
+            label: Text(
               (active != null || ref.read(isBreakPausedProvider))
                   ? 'Switch Task'
                   : 'Start Task',
@@ -51,7 +57,11 @@ class _QuickActionsState extends ConsumerState<QuickActions> {
               return FilledButton.icon(
                 onPressed: () =>
                     isPaused ? vm.resumePreviousTask() : vm.startBreak(),
-                icon: const Icon(Icons.lunch_dining),
+                icon: SvgPicture.asset(
+                  'assets/icons/play_pause.svg',
+                  width: 18,
+                  height: 18,
+                ),
                 label: Text(label),
               );
             },
@@ -89,7 +99,11 @@ class _QuickActionsState extends ConsumerState<QuickActions> {
                 },
               );
             },
-            icon: const Icon(Icons.stop),
+            icon: SvgPicture.asset(
+              'assets/icons/clock.svg',
+              width: 18,
+              height: 18,
+            ),
             label: const Text('End Day'),
           ),
         ],

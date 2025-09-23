@@ -5,8 +5,6 @@ import 'package:time_tracker/app/theme.dart';
 import 'package:time_tracker/core/window_utils.dart';
 import 'package:time_tracker/features/home/home_screen.dart';
 import 'package:tray_manager/tray_manager.dart';
-import 'package:time_tracker/app/app.dart'
-    show appNavigatorKey, promptStartOrSwitchTask;
 
 class _TrayHandler with TrayListener {
   void init() {
@@ -32,7 +30,7 @@ class _TrayHandler with TrayListener {
       case 'start_switch':
         await WindowUtils.showMainWindow();
         final context = appNavigatorKey.currentContext;
-        if (context != null) {
+        if (context != null && context.mounted) {
           await promptStartOrSwitchTask(context);
         }
         break;
@@ -64,8 +62,7 @@ final _TrayHandler _trayHandler = _TrayHandler();
 
 Future<void> _setupTray() async {
   _trayHandler.init();
-  // Use an existing bundled asset for the tray icon to avoid missing asset issues during setup
-  const String iconPath = 'web/favicon.png';
+  const String iconPath = 'assets/icons/clock.svg';
   await trayManager.setIcon(iconPath);
   final Menu menu = Menu(
     items: [
