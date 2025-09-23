@@ -18,4 +18,16 @@ class AppDelegate: FlutterAppDelegate {
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
     return true
   }
+
+  // When the user clicks the Dock icon while the app is running but no window
+  // is visible, bring the Flutter window to front.
+  override func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    if !flag {
+      NSApp.activate(ignoringOtherApps: true)
+      for window in NSApp.windows {
+        window.makeKeyAndOrderFront(self)
+      }
+    }
+    return true
+  }
 }
