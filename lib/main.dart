@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_tracker/app/app.dart';
@@ -62,8 +64,20 @@ final _TrayHandler _trayHandler = _TrayHandler();
 
 Future<void> _setupTray() async {
   _trayHandler.init();
-  const String iconPath = 'assets/icons/clock.svg';
-  await trayManager.setIcon(iconPath);
+  Future<void> applyTrayIcon() async {
+    final Brightness brightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final String iconPath = brightness == Brightness.dark
+        ? 'assets/icons/tray_clock_dark.svg'
+        : 'assets/icons/tray_clock_light.svg';
+    await trayManager.setIcon(iconPath);
+  }
+
+  await applyTrayIcon();
+
+  WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged = () {
+    unawaited(applyTrayIcon());
+  };
   final Menu menu = Menu(
     items: [
       MenuItem(key: 'show_hide', label: 'Bring Up Window'),

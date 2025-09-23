@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:time_tracker/features/tracking/view_models.dart';
 import 'package:time_tracker/app/providers.dart' as app_providers;
+import 'package:time_tracker/features/tracking/view_models.dart';
 
 class CurrentPanel extends ConsumerStatefulWidget {
   const CurrentPanel({super.key});

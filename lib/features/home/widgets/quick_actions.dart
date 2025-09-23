@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:time_tracker/app/app.dart' show promptStartOrSwitchTask;
 import 'package:time_tracker/app/providers.dart';
-import 'package:time_tracker/features/tracking/view_models.dart';
 import 'package:time_tracker/core/csv_exporter.dart';
+import 'package:time_tracker/features/tracking/view_models.dart';
 
 class QuickActions extends ConsumerStatefulWidget {
   const QuickActions({super.key});
@@ -69,8 +69,10 @@ class _QuickActionsState extends ConsumerState<QuickActions> {
           const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: () async {
+              // Ensure any running timer is stopped before exporting
+              await vm.stopCurrent();
               final entries = await ref.read(todayEntriesProvider.future);
-              final csv = exportTimeEntriesToCsv(entries);
+              final csv = await exportTaskDurationsCsv(ref, entries);
               if (!context.mounted) return;
               await showDialog<void>(
                 context: context,

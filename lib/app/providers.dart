@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:time_tracker/data/local_db.dart';
-import 'package:time_tracker/data/repositories/summary_repository.dart';
 import 'package:time_tracker/data/repositories/settings_repository.dart';
+import 'package:time_tracker/data/repositories/summary_repository.dart';
 import 'package:time_tracker/data/repositories/task_repository.dart';
 import 'package:time_tracker/data/repositories/time_entry_repository.dart';
 import 'package:time_tracker/data/tasks_dao.dart';
