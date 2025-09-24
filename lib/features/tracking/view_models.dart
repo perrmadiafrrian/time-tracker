@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:time_tracker/app/providers.dart' as app_providers;
@@ -156,25 +157,55 @@ Stream<List<domain.TimeEntry>> todayEntries(Ref ref) {
 }
 
 @riverpod
-Stream<domain.DailySummary> dailySummary(Ref ref) async* {
+Stream<domain.DailySummary> dailySummary(Ref ref) {
   final dao = ref.watch(app_providers.timeEntriesDaoProvider);
-  final now = DateTime.now().toUtc();
-  await for (final entries in dao.watchEntriesForDay(
-    DateTime.utc(now.year, now.month, now.day),
-  )) {
+  final DateTime now = DateTime.now().toUtc();
+  final DateTime day = DateTime.utc(now.year, now.month, now.day);
+
+  final StreamController<domain.DailySummary> controller =
+      StreamController<domain.DailySummary>();
+
+  List<TimeEntry> latestEntries = <TimeEntry>[];
+
+  void emitSummary() {
     Duration total = Duration.zero;
     final Map<String, Duration> byTask = <String, Duration>{};
-    for (final e in entries) {
-      final endAt = e.endAt ?? DateTime.now().toUtc();
+    final DateTime current = DateTime.now().toUtc();
+    for (final e in latestEntries) {
+      final DateTime endAt = e.endAt ?? current;
       if (!endAt.isAfter(e.startAt)) continue;
-      final d = endAt.difference(e.startAt);
+      final Duration d = endAt.difference(e.startAt);
       total += d;
       byTask.update(e.taskId, (v) => v + d, ifAbsent: () => d);
     }
-    yield domain.DailySummary(
-      date: DateTime.utc(now.year, now.month, now.day),
-      totalDuration: total,
-      taskDurations: byTask,
-    );
+    if (!controller.isClosed) {
+      controller.add(
+        domain.DailySummary(
+          date: day,
+          totalDuration: total,
+          taskDurations: byTask,
+        ),
+      );
+    }
   }
+
+  final StreamSubscription<List<TimeEntry>> entriesSub = dao
+      .watchEntriesForDay(day)
+      .listen((List<TimeEntry> entries) {
+        latestEntries = entries;
+        emitSummary();
+      });
+
+  final StreamSubscription<int> tickerSub = Stream<int>.periodic(
+    const Duration(seconds: 1),
+    (i) => i,
+  ).listen((_) => emitSummary());
+
+  ref.onDispose(() async {
+    await entriesSub.cancel();
+    await tickerSub.cancel();
+    await controller.close();
+  });
+
+  return controller.stream;
 }

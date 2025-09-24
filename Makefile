@@ -4,7 +4,7 @@
 UNAME_S := $(shell uname -s)
 
 APP_NAME := time_tracker
-PROJECT_ROOT := $(abspath .)
+PROJECT_ROOT ?= $(CURDIR)
 
 # Default target
 .PHONY: all
@@ -26,7 +26,7 @@ build-macos:
 	flutter pub get
 	dart run build_runner build --delete-conflicting-outputs
 	flutter build macos --release
-	@echo "Built macOS app at macos/Build/Products/Release/$(APP_NAME).app"
+	@echo "Built macOS app under build/macos/Build/Products/Release"
 
 build-windows:
 	flutter pub get
@@ -51,27 +51,69 @@ build-android:
 	flutter build apk --release
 
 # --- Install targets ---
-.PHONY: install install-macos install-windows install-linux
+.PHONY: install install-unsigned install-macos install-macos-unsigned install-windows install-linux
 
 install:
 	@if [ "$(UNAME_S)" = "Darwin" ]; then \
-		$(MAKE) install-macos; \
+		$(MAKE) install-macos-unsigned; \
 	elif echo "$(UNAME_S)" | grep -qiE "mingw|msys|cygwin"; then \
 		$(MAKE) install-windows; \
 	else \
 		$(MAKE) install-linux; \
 	fi
 
+# Unsigned install dispatcher (macOS only for now)
+install-unsigned:
+	@if [ "$(UNAME_S)" = "Darwin" ]; then \
+		$(MAKE) install-macos-unsigned; \
+	else \
+		echo "install-unsigned is only applicable on macOS"; \
+	fi
+
 # macOS: copy .app to ~/Applications (create dir if missing)
+
 install-macos: build-macos
-	@APP_SRC="$(PROJECT_ROOT)/macos/Build/Products/Release/$(APP_NAME).app"; \
-	APP_DST="$$HOME/Applications/$(APP_NAME).app"; \
+	ROOT="$(PROJECT_ROOT)"; [ -n "$$ROOT" ] || ROOT="$(PWD)"; \
+	APP_SRC=""; \
+	for D in "$$ROOT/build/macos/Build/Products/Release" "$$ROOT/macos/Build/Products/Release"; do \
+	  if [ -d "$$D" ]; then \
+	    APP_SRC="$$(/usr/bin/find "$$D" -type d -name "*.app" -print -quit 2>/dev/null)"; \
+	    [ -n "$$APP_SRC" ] && break; \
+	  fi; \
+	done; \
+	if [ -z "$$APP_SRC" ]; then \
+	  echo "No .app found under $$ROOT/build/macos/Build/Products/Release or $$ROOT/macos/Build/Products/Release"; exit 1; \
+	fi; \
+	APP_BUNDLE_NAME="$$(basename \"$$APP_SRC\")"; \
+	APP_DST="$$HOME/Applications/$$APP_BUNDLE_NAME"; \
 	mkdir -p "$$HOME/Applications"; \
 	rm -rf "$$APP_DST"; \
 	cp -R "$$APP_SRC" "$$APP_DST"; \
 	codesign --force --deep --sign - "$$APP_DST" >/dev/null 2>&1 || true; \
 	zip -qry "$$APP_DST" >/dev/null 2>&1 || true; \
 	echo "Installed to $$APP_DST"
+
+# macOS: copy .app without codesigning
+
+install-macos-unsigned: build-macos
+	@set -e; \
+	ROOT="$(PROJECT_ROOT)"; [ -n "$$ROOT" ] || ROOT="$(PWD)"; \
+	APP_SRC=""; \
+	for D in "$$ROOT/build/macos/Build/Products/Release" "$$ROOT/macos/Build/Products/Release"; do \
+	  if [ -d "$$D" ]; then \
+	    APP_SRC="$$(/usr/bin/find "$$D" -type d -name "*.app" -print -quit 2>/dev/null)"; \
+	    [ -n "$$APP_SRC" ] && break; \
+	  fi; \
+	done; \
+	if [ -z "$$APP_SRC" ]; then \
+	  echo "No .app found under $$ROOT/build/macos/Build/Products/Release or $$ROOT/macos/Build/Products/Release"; exit 1; \
+	fi; \
+	APP_BUNDLE_NAME="$$(basename "$$APP_SRC")"; \
+	APP_DST="$$HOME/Applications/$$APP_BUNDLE_NAME"; \
+	mkdir -p "$$HOME/Applications"; \
+	rm -rf "$$APP_DST"; \
+	cp -R "$$APP_SRC" "$$APP_DST"; \
+	echo "Installed unsigned to $$APP_DST"
 
 # Windows/Linux: leave built artifacts in build directory; provide a stub
 install-windows: build-windows

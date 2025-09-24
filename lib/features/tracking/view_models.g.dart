@@ -41,7 +41,7 @@ final todayEntriesProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TodayEntriesRef = AutoDisposeStreamProviderRef<List<domain.TimeEntry>>;
-String _$dailySummaryHash() => r'2ca2c914cd1ba74530cefb5dfe151978c9a8564c';
+String _$dailySummaryHash() => r'eca0491d1094ef7758530c54f921b5f081d57193';
 
 /// See also [dailySummary].
 @ProviderFor(dailySummary)
@@ -59,7 +59,7 @@ final dailySummaryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DailySummaryRef = AutoDisposeStreamProviderRef<domain.DailySummary>;
-String _$trackingViewModelHash() => r'31ee979baf9ea462e3a5a8f78941f6ee7367bfb5';
+String _$trackingViewModelHash() => r'103c0b603ea7f1f88667f2c5586c1807547e4b8d';
 
 /// See also [TrackingViewModel].
 @ProviderFor(TrackingViewModel)
