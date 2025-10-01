@@ -184,9 +184,11 @@ Stream<domain.DailySummary> dailySummary(Ref ref) {
   void emitSummary() {
     Duration total = Duration.zero;
     final Map<String, Duration> byTask = <String, Duration>{};
-    final DateTime current = DateTime.now().toUtc();
+    // Only count completed entries (endAt is not null)
+    // Active entries will be handled by _LiveTaskDuration
     for (final e in latestEntries) {
-      final DateTime endAt = e.endAt ?? current;
+      if (e.endAt == null) continue; // Skip active entries
+      final DateTime endAt = e.endAt!;
       if (!endAt.isAfter(e.startAt)) continue;
       final Duration d = endAt.difference(e.startAt);
       total += d;
@@ -210,14 +212,9 @@ Stream<domain.DailySummary> dailySummary(Ref ref) {
         emitSummary();
       });
 
-  final StreamSubscription<int> tickerSub = Stream<int>.periodic(
-    const Duration(seconds: 1),
-    (i) => i,
-  ).listen((_) => emitSummary());
-
+  // No need for ticker since we only count completed entries
   ref.onDispose(() async {
     await entriesSub.cancel();
-    await tickerSub.cancel();
     await controller.close();
   });
 

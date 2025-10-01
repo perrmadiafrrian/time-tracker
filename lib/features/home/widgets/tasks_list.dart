@@ -197,8 +197,8 @@ class _TaskListItem extends ConsumerWidget {
   }
 }
 
-// Widget that displays task duration and watches for base duration changes
-class _TaskDurationDisplay extends ConsumerWidget {
+// Widget that displays task duration - reads summary once, doesn't watch
+class _TaskDurationDisplay extends ConsumerStatefulWidget {
   final String taskId;
   final bool isActive;
   final TimeEntry? activeEntry;
@@ -210,36 +210,49 @@ class _TaskDurationDisplay extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final dailySummaryAsync = ref.watch(dailySummaryProvider);
+  ConsumerState<_TaskDurationDisplay> createState() =>
+      _TaskDurationDisplayState();
+}
 
-    return dailySummaryAsync.when(
-      data: (summary) {
-        final baseDuration = summary.taskDurations[taskId] ?? Duration.zero;
-        return _LiveTaskDuration(
-          baseDuration: baseDuration,
-          startTime: isActive ? activeEntry?.startAt : null,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontFeatures: [const FontFeature.tabularFigures()],
-          ),
-        );
-      },
-      loading: () => _LiveTaskDuration(
-        baseDuration: Duration.zero,
-        startTime: null,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontFeatures: [const FontFeature.tabularFigures()],
-        ),
-      ),
-      error: (_, __) => _LiveTaskDuration(
-        baseDuration: Duration.zero,
-        startTime: null,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontFeatures: [const FontFeature.tabularFigures()],
-        ),
+class _TaskDurationDisplayState extends ConsumerState<_TaskDurationDisplay> {
+  Duration? _baseDuration;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBaseDuration();
+  }
+
+  @override
+  void didUpdateWidget(_TaskDurationDisplay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload duration if active state changes (task started/stopped)
+    if (oldWidget.isActive != widget.isActive) {
+      _loadBaseDuration();
+    }
+  }
+
+  void _loadBaseDuration() {
+    // Read the summary once without watching
+    ref.read(dailySummaryProvider.future).then((summary) {
+      if (mounted) {
+        setState(() {
+          _baseDuration = summary.taskDurations[widget.taskId] ?? Duration.zero;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final baseDuration = _baseDuration ?? Duration.zero;
+
+    return _LiveTaskDuration(
+      baseDuration: baseDuration,
+      startTime: widget.isActive ? widget.activeEntry?.startAt : null,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        fontFeatures: [const FontFeature.tabularFigures()],
       ),
     );
   }
