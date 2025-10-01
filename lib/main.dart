@@ -8,6 +8,7 @@ import 'package:time_tracker/app/theme.dart';
 import 'package:time_tracker/core/window_utils.dart';
 import 'package:time_tracker/features/home/home_screen.dart';
 import 'package:tray_manager/tray_manager.dart';
+import 'package:window_manager/window_manager.dart';
 
 class _TrayHandler with TrayListener {
   void init() {
@@ -44,14 +45,28 @@ class _TrayHandler with TrayListener {
   }
 }
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  _setupTray();
-  runApp(const ProviderScope(child: MyApp()));
-  // Ensure the window is shown and focused after the first frame on desktop
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    WindowUtils.showMainWindow();
+
+  // Initialize window with minimum size constraints
+  await windowManager.ensureInitialized();
+
+  const windowOptions = WindowOptions(
+    size: Size(1000, 700),
+    minimumSize: Size(800, 600),
+    center: true,
+    backgroundColor: Colors.transparent,
+    skipTaskbar: false,
+    titleBarStyle: TitleBarStyle.normal,
+  );
+
+  await windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.show();
+    await windowManager.focus();
   });
+
+  await _setupTray();
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 final _TrayHandler _trayHandler = _TrayHandler();

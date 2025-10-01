@@ -39,6 +39,10 @@ class _QuickActionsState extends ConsumerState<QuickActions> {
               'assets/icons/start.svg',
               width: 18,
               height: 18,
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
             ),
             label: Text(
               (active != null || ref.read(isBreakPausedProvider))
@@ -61,6 +65,10 @@ class _QuickActionsState extends ConsumerState<QuickActions> {
                   'assets/icons/play_pause.svg',
                   width: 18,
                   height: 18,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 label: Text(label),
               );
@@ -105,6 +113,10 @@ class _QuickActionsState extends ConsumerState<QuickActions> {
               'assets/icons/clock.svg',
               width: 18,
               height: 18,
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
             ),
             label: const Text('End Day'),
           ),

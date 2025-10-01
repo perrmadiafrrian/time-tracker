@@ -161,6 +161,10 @@ class _TasksListState extends ConsumerState<TasksList> {
                                 'assets/icons/start.svg',
                                 width: 16,
                                 height: 16,
+                                colorFilter: const ColorFilter.mode(
+                                  Colors.white,
+                                  BlendMode.srcIn,
+                                ),
                               ),
                               label: const Text('Start'),
                               style: FilledButton.styleFrom(

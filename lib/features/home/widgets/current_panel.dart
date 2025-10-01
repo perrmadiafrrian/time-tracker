@@ -150,11 +150,18 @@ class _CurrentPanelState extends ConsumerState<CurrentPanel> {
                             : 'assets/icons/pause.svg',
                         width: 16,
                         height: 16,
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.onTertiary,
+                          BlendMode.srcIn,
+                        ),
                       ),
                       label: Text(isPaused ? 'End Break' : 'Break'),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         backgroundColor: Theme.of(context).colorScheme.tertiary,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onTertiary,
                       ),
                     ),
                   ),
@@ -170,6 +177,10 @@ class _CurrentPanelState extends ConsumerState<CurrentPanel> {
                         'assets/icons/stop.svg',
                         width: 16,
                         height: 16,
+                        colorFilter: ColorFilter.mode(
+                          Theme.of(context).colorScheme.error,
+                          BlendMode.srcIn,
+                        ),
                       ),
                       label: const Text('Stop'),
                       style: OutlinedButton.styleFrom(
