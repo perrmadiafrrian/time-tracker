@@ -20,6 +20,13 @@ class _TrayHandler with TrayListener {
 
   @override
   void onTrayIconMouseDown() async {
+    // Left click: directly open the app window
+    await WindowUtils.showMainWindow();
+  }
+
+  @override
+  void onTrayIconRightMouseDown() async {
+    // Right click: show context menu
     await trayManager.popUpContextMenu();
   }
 
@@ -29,20 +36,6 @@ class _TrayHandler with TrayListener {
       case 'show_hide':
         // Bring Up Window: always show and focus
         await WindowUtils.showMainWindow();
-        break;
-      case 'start_switch':
-        await WindowUtils.showMainWindow();
-        final context = appNavigatorKey.currentContext;
-        if (context != null && context.mounted) {
-          await promptStartOrSwitchTask(context);
-        }
-        break;
-      case 'lunch_break':
-        // This will be handled via provider in UI
-        break;
-      case 'resume_prev':
-        break;
-      case 'stop':
         break;
       case 'quit':
         await trayManager.destroy();
@@ -79,13 +72,10 @@ Future<void> _setupTray() async {
   WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged = () {
     unawaited(applyTrayIcon());
   };
+  // Simplified context menu for right-click only
   final Menu menu = Menu(
     items: [
-      MenuItem(key: 'show_hide', label: 'Bring Up Window'),
-      MenuItem.separator(),
-      MenuItem(key: 'start_switch', label: 'Start/Switch'),
-      MenuItem(key: 'lunch_break', label: 'Lunch Break'),
-      MenuItem(key: 'stop', label: 'Stop'),
+      MenuItem(key: 'show_hide', label: 'Show Window'),
       MenuItem.separator(),
       MenuItem(key: 'quit', label: 'Quit'),
     ],

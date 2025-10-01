@@ -59,7 +59,7 @@ final dailySummaryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DailySummaryRef = AutoDisposeStreamProviderRef<domain.DailySummary>;
-String _$trackingViewModelHash() => r'103c0b603ea7f1f88667f2c5586c1807547e4b8d';
+String _$trackingViewModelHash() => r'd025617c7b1fbd4fc43883f004483f4bccf19d08';
 
 /// See also [TrackingViewModel].
 @ProviderFor(TrackingViewModel)

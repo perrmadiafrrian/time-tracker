@@ -97,11 +97,13 @@ class TrackingViewModel extends _$TrackingViewModel {
 
   Future<String> _resolveTaskIdByName(String name) async {
     final TasksDao dao = ref.read(app_providers.tasksDaoProvider);
-    final existing = await dao.getByName(name);
+    // Check if task with this name exists today
+    final existing = await dao.getTodayByName(name);
     if (existing != null) {
       state = state.copyWith(lastNonBreakTaskId: existing.id);
       return existing.id;
     }
+    // Create new task for today
     final String id = _uuid.v4();
     final now = DateTime.now().toUtc();
     await dao.createTask(id: id, name: name, description: null, createdAt: now);
@@ -123,6 +125,18 @@ class TrackingViewModel extends _$TrackingViewModel {
     if (current != null) {
       await repo.stop(id: current.id, endAt: DateTime.now().toUtc());
     }
+  }
+
+  Future<void> createTask({required String name, String? description}) async {
+    final TasksDao dao = ref.read(app_providers.tasksDaoProvider);
+    final String id = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    await dao.createTask(
+      id: id,
+      name: name,
+      description: description,
+      createdAt: now,
+    );
   }
 }
 
