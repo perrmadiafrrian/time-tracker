@@ -7,6 +7,324 @@ import 'package:time_tracker/app/providers.dart';
 import 'package:time_tracker/data/local_db.dart';
 import 'package:time_tracker/features/tracking/view_models.dart';
 
+// Widget for individual task list item that fetches its own duration
+class _TaskListItem extends ConsumerWidget {
+  final Task task;
+  final bool isActive;
+  final TimeEntry? activeEntry;
+
+  const _TaskListItem({
+    required this.task,
+    required this.isActive,
+    this.activeEntry,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksDao = ref.watch(tasksDaoProvider);
+    final vm = ref.read(trackingViewModelProvider.notifier);
+
+    return ListTile(
+      leading: Icon(
+        isActive ? Icons.play_circle : Icons.circle_outlined,
+        color: isActive
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+      ),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              task.name,
+              style: TextStyle(
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+          _TaskDurationDisplay(
+            taskId: task.id,
+            isActive: isActive,
+            activeEntry: activeEntry,
+          ),
+        ],
+      ),
+      subtitle: task.description?.isNotEmpty == true
+          ? Text(task.description!)
+          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isActive)
+            Chip(
+              label: const Text('Active'),
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              labelStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                fontSize: 12,
+              ),
+              padding: EdgeInsets.zero,
+            )
+          else
+            FilledButton.icon(
+              onPressed: () async {
+                if (activeEntry != null) {
+                  await vm.switchTask(newTaskId: task.id);
+                } else {
+                  await vm.startTask(taskId: task.id);
+                }
+              },
+              icon: SvgPicture.asset(
+                'assets/icons/start.svg',
+                width: 16,
+                height: 16,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: const Text('Start'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+            ),
+          const SizedBox(width: 8),
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'edit') {
+                _showEditTaskDialog(context, ref, task);
+              } else if (value == 'archive') {
+                unawaited(tasksDao.archiveTask(task.id));
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 18),
+                    SizedBox(width: 8),
+                    Text('Edit'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'archive',
+                child: Row(
+                  children: [
+                    Icon(Icons.archive, size: 18),
+                    SizedBox(width: 8),
+                    Text('Archive'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditTaskDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Task task,
+  ) async {
+    final nameController = TextEditingController(text: task.name);
+    final descriptionController = TextEditingController(
+      text: task.description ?? '',
+    );
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Task'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Task Name',
+                hintText: 'Enter task name',
+              ),
+              textCapitalization: TextCapitalization.sentences,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                hintText: 'Enter description',
+              ),
+              textCapitalization: TextCapitalization.sentences,
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && context.mounted) {
+      final name = nameController.text.trim();
+      if (name.isNotEmpty) {
+        final tasksDao = ref.read(tasksDaoProvider);
+        await tasksDao.updateTask(
+          id: task.id,
+          name: name,
+          description: descriptionController.text.trim().isNotEmpty
+              ? descriptionController.text.trim()
+              : null,
+        );
+      }
+    }
+
+    nameController.dispose();
+    descriptionController.dispose();
+  }
+}
+
+// Widget that displays task duration and watches for base duration changes
+class _TaskDurationDisplay extends ConsumerWidget {
+  final String taskId;
+  final bool isActive;
+  final TimeEntry? activeEntry;
+
+  const _TaskDurationDisplay({
+    required this.taskId,
+    required this.isActive,
+    this.activeEntry,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dailySummaryAsync = ref.watch(dailySummaryProvider);
+
+    return dailySummaryAsync.when(
+      data: (summary) {
+        final baseDuration = summary.taskDurations[taskId] ?? Duration.zero;
+        return _LiveTaskDuration(
+          baseDuration: baseDuration,
+          startTime: isActive ? activeEntry?.startAt : null,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontFeatures: [const FontFeature.tabularFigures()],
+          ),
+        );
+      },
+      loading: () => _LiveTaskDuration(
+        baseDuration: Duration.zero,
+        startTime: null,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontFeatures: [const FontFeature.tabularFigures()],
+        ),
+      ),
+      error: (_, __) => _LiveTaskDuration(
+        baseDuration: Duration.zero,
+        startTime: null,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontFeatures: [const FontFeature.tabularFigures()],
+        ),
+      ),
+    );
+  }
+}
+
+// Widget that displays and updates task duration in real-time
+class _LiveTaskDuration extends StatefulWidget {
+  final Duration baseDuration;
+  final DateTime? startTime;
+  final TextStyle? style;
+
+  const _LiveTaskDuration({
+    required this.baseDuration,
+    this.startTime,
+    this.style,
+  });
+
+  @override
+  State<_LiveTaskDuration> createState() => _LiveTaskDurationState();
+}
+
+class _LiveTaskDurationState extends State<_LiveTaskDuration> {
+  Timer? _timer;
+  Duration _currentDuration = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateDuration();
+    if (widget.startTime != null) {
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) {
+          _updateDuration();
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(_LiveTaskDuration oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.startTime != oldWidget.startTime ||
+        widget.baseDuration != oldWidget.baseDuration) {
+      _updateDuration();
+      _timer?.cancel();
+      if (widget.startTime != null) {
+        _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (mounted) {
+            _updateDuration();
+          }
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _updateDuration() {
+    setState(() {
+      if (widget.startTime != null) {
+        final elapsed = DateTime.now().toUtc().difference(widget.startTime!);
+        _currentDuration = widget.baseDuration + elapsed;
+      } else {
+        _currentDuration = widget.baseDuration;
+      }
+    });
+  }
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final s = d.inSeconds.remainder(60);
+    return '${h}h ${m}m ${s}s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(_formatDuration(_currentDuration), style: widget.style);
+  }
+}
+
 class TasksList extends ConsumerStatefulWidget {
   const TasksList({super.key});
 
@@ -32,8 +350,8 @@ class _TasksListState extends ConsumerState<TasksList> {
   @override
   Widget build(BuildContext context) {
     final tasksDao = ref.watch(tasksDaoProvider);
-    final vm = ref.read(trackingViewModelProvider.notifier);
     final activeEntry = ref.watch(activeEntryProvider).valueOrNull;
+    final dailySummaryAsync = ref.watch(dailySummaryProvider);
 
     return Card(
       child: Column(
@@ -41,14 +359,43 @@ class _TasksListState extends ConsumerState<TasksList> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tasks', style: Theme.of(context).textTheme.titleLarge),
-                FilledButton.icon(
-                  onPressed: () => _showAddTaskDialog(context, ref),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add Task'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Tasks',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    FilledButton.icon(
+                      onPressed: () => _showAddTaskDialog(context, ref),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add Task'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                dailySummaryAsync.when(
+                  data: (summary) {
+                    return Row(
+                      children: [
+                        const Text('Total today: '),
+                        _LiveTaskDuration(
+                          baseDuration: summary.totalDuration,
+                          startTime: activeEntry?.startAt,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () => const SizedBox(),
+                  error: (_, __) => const SizedBox(),
                 ),
               ],
             ),
@@ -111,103 +458,10 @@ class _TasksListState extends ConsumerState<TasksList> {
                     final task = tasks[index];
                     final isActive = activeEntry?.taskId == task.id;
 
-                    return ListTile(
-                      leading: Icon(
-                        isActive ? Icons.play_circle : Icons.circle_outlined,
-                        color: isActive
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                      title: Text(
-                        task.name,
-                        style: TextStyle(
-                          fontWeight: isActive
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                      subtitle: task.description?.isNotEmpty == true
-                          ? Text(task.description!)
-                          : null,
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isActive)
-                            Chip(
-                              label: const Text('Active'),
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.primaryContainer,
-                              labelStyle: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer,
-                                fontSize: 12,
-                              ),
-                              padding: EdgeInsets.zero,
-                            )
-                          else
-                            FilledButton.icon(
-                              onPressed: () async {
-                                if (activeEntry != null) {
-                                  await vm.switchTask(newTaskId: task.id);
-                                } else {
-                                  await vm.startTask(taskId: task.id);
-                                }
-                              },
-                              icon: SvgPicture.asset(
-                                'assets/icons/start.svg',
-                                width: 16,
-                                height: 16,
-                                colorFilter: const ColorFilter.mode(
-                                  Colors.white,
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                              label: const Text('Start'),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                              ),
-                            ),
-                          const SizedBox(width: 8),
-                          PopupMenuButton<String>(
-                            onSelected: (value) async {
-                              if (value == 'edit') {
-                                _showEditTaskDialog(context, ref, task);
-                              } else if (value == 'archive') {
-                                unawaited(tasksDao.archiveTask(task.id));
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit, size: 18),
-                                    SizedBox(width: 8),
-                                    Text('Edit'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'archive',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.archive, size: 18),
-                                    SizedBox(width: 8),
-                                    Text('Archive'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    return _TaskListItem(
+                      task: task,
+                      isActive: isActive,
+                      activeEntry: activeEntry,
                     );
                   },
                 );
@@ -285,75 +539,6 @@ class _TasksListState extends ConsumerState<TasksList> {
 
         // Create the task using the view model's method
         await vm.createTask(
-          name: name,
-          description: descriptionController.text.trim().isNotEmpty
-              ? descriptionController.text.trim()
-              : null,
-        );
-      }
-    }
-
-    nameController.dispose();
-    descriptionController.dispose();
-  }
-
-  Future<void> _showEditTaskDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Task task,
-  ) async {
-    final nameController = TextEditingController(text: task.name);
-    final descriptionController = TextEditingController(
-      text: task.description ?? '',
-    );
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Task'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Task Name',
-                hintText: 'Enter task name',
-              ),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                hintText: 'Enter description',
-              ),
-              textCapitalization: TextCapitalization.sentences,
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && context.mounted) {
-      final name = nameController.text.trim();
-      if (name.isNotEmpty) {
-        final tasksDao = ref.read(tasksDaoProvider);
-        await tasksDao.updateTask(
-          id: task.id,
           name: name,
           description: descriptionController.text.trim().isNotEmpty
               ? descriptionController.text.trim()

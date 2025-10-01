@@ -23,23 +23,6 @@ final appDatabaseProvider = Provider<AppDatabase>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AppDatabaseRef = ProviderRef<AppDatabase>;
-String _$taskRepositoryHash() => r'ca02ded694b4a559caacf1bf3669fd0b0f5b8a68';
-
-/// See also [taskRepository].
-@ProviderFor(taskRepository)
-final taskRepositoryProvider = Provider<TaskRepository>.internal(
-  taskRepository,
-  name: r'taskRepositoryProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$taskRepositoryHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef TaskRepositoryRef = ProviderRef<TaskRepository>;
 String _$timeEntryRepositoryHash() =>
     r'933bcc86d93f649a6f0dfe032305ce0cc0830d17';
 
@@ -58,23 +41,6 @@ final timeEntryRepositoryProvider = Provider<TimeEntryRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TimeEntryRepositoryRef = ProviderRef<TimeEntryRepository>;
-String _$summaryRepositoryHash() => r'3e4a7913353ff9ea182c4381c79f66125d1254b4';
-
-/// See also [summaryRepository].
-@ProviderFor(summaryRepository)
-final summaryRepositoryProvider = Provider<SummaryRepository>.internal(
-  summaryRepository,
-  name: r'summaryRepositoryProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$summaryRepositoryHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef SummaryRepositoryRef = ProviderRef<SummaryRepository>;
 String _$tasksDaoHash() => r'506baa639d13728c8b64d0ef2ce4d3318c9a114d';
 
 /// See also [tasksDao].
