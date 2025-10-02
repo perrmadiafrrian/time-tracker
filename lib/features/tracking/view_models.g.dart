@@ -41,7 +41,7 @@ final todayEntriesProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TodayEntriesRef = AutoDisposeStreamProviderRef<List<domain.TimeEntry>>;
-String _$dailySummaryHash() => r'eca0491d1094ef7758530c54f921b5f081d57193';
+String _$dailySummaryHash() => r'7f2d97a6e7119c2c8a3c4564bb3f07fe7c7b48c8';
 
 /// See also [dailySummary].
 @ProviderFor(dailySummary)
